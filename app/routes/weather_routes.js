@@ -42,12 +42,12 @@ router.get('/weather/:id', (req, res, next) => {
 
 router.get('/latest', (req, res, next) => {
     Weather.find({}).sort({_id: -1}).limit(1).then((weather) => {
-        weather.logTime = new Date(weather[0].createdAt).toLocaleString('en-us')
-        console.log("logtime",weather)
+        // weather.logTime = new Date(weather[0].createdAt).toLocaleString('en-us')
+        // console.log("logtime",weather)
         res.status(200).json({weather: weather})
-        console.log("created at",weather[0].createdAt)
-        const date = new Date(`${weather[0].createdAt}`).toLocaleString('en-us')
-        console.log(date)
+        // console.log("created at",weather[0].createdAt)
+        // const date = new Date(`${weather[0].createdAt}`).toLocaleString('en-us')
+        // console.log(date)
     })
     .catch(next)
 
