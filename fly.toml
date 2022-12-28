@@ -11,7 +11,7 @@ processes = []
 [env]
   PORT = "8080"
   MONGODB_URI = "mongodb+srv://harrisimon:Duct7apeWallet@movielogger.rvys3ds.mongodb.net/tinyweather?retryWrites=true&w=majority"
-  CLIENT_ORIGIN = "http://tiny-weather.com"
+  CLIENT_ORIGIN = "http://www.tiny-weather.com"
 
 [experimental]
   allowed_public_ports = []
