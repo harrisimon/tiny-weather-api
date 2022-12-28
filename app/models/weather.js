@@ -22,4 +22,6 @@ const weatherSchema = new mongoose.Schema(
     }
 )
 
+
+
 module.exports = mongoose.model('Weather', weatherSchema)
