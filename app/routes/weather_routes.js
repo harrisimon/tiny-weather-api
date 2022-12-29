@@ -2,6 +2,7 @@ const express = require("express")
 const passport = require("passport")
 
 const Weather = require("../models/weather")
+const User = require('../models/user')
 
 const customErrors = require("../../lib/custom_errors")
 const handle404 = customErrors.handle404
@@ -43,11 +44,23 @@ router.get("/weather/:id", (req, res, next) => {
 
 router.get("/latest", (req, res, next) => {
 	Weather.find({})
+        
 		.sort({ _id: -1 })
 		.limit(1)
+        .populate({
+            path: 'reviews',
+            populate: {
+                path:'author',
+                model:'User',
+                    populate: {
+
+                        path:'email'
+                    }
+            }
+        })
 		.then((weather) => {
 			// weather.logTime = new Date(weather[0].createdAt).toLocaleString('en-us')
-			// console.log("logtime",weather)
+			console.log("logtime",weather[0].reviews)
 			res.status(200).json({ weather: weather })
 			// console.log("created at",weather[0].createdAt)
 			// const date = new Date(`${weather[0].createdAt}`).toLocaleString('en-us')
