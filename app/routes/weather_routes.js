@@ -60,7 +60,7 @@ router.get("/latest", (req, res, next) => {
         })
 		.then((weather) => {
 			// weather.logTime = new Date(weather[0].createdAt).toLocaleString('en-us')
-			console.log("logtime",weather[0].reviews)
+			// console.log("logtime",weather[0].reviews)
 			res.status(200).json({ weather: weather })
 			// console.log("created at",weather[0].createdAt)
 			// const date = new Date(`${weather[0].createdAt}`).toLocaleString('en-us')
