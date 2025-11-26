@@ -113,4 +113,19 @@ router.delete("/delete/:id", (req, res, next) => {
 		.catch(next)
 })
 
+router.get("/history/24h", (req, res, next) => {
+    const now = new Date()
+    const cutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+
+    Weather.find({
+        createdAt: { $gte: cutoff }
+    })
+        .sort({ createdAt: 1 }) // chronological order
+        .then((weather) => {
+            res.status(200).json({ weather })
+        })
+        .catch(next)
+})
+
+
 module.exports = router
