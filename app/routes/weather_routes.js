@@ -20,6 +20,14 @@ const bucketFormats = {
 	day: "%Y-%m-%dT00:00:00.000Z",
 }
 
+const addReadingAtStage = {
+	$addFields: {
+		readingAt: {
+			$ifNull: ["$measuredAt", "$createdAt"],
+		},
+	},
+}
+
 const parseOptionalDate = (value, fallback) => {
 	if (!value) {
 		return fallback
@@ -45,7 +53,7 @@ const getHistoryOptions = (query) => {
 	}
 
 	const match = {
-		measuredAt: {
+		readingAt: {
 			$gte: from,
 			$lte: to,
 		},
@@ -162,9 +170,12 @@ router.get("/weather/history", (req, res, next) => {
 	const { match } = getHistoryOptions(req.query)
 	const limit = getHistoryLimit(req.query)
 
-	Weather.find(match)
-		.sort({ measuredAt: 1 })
-		.limit(limit)
+	Weather.aggregate([
+		addReadingAtStage,
+		{ $match: match },
+		{ $sort: { readingAt: 1 } },
+		{ $limit: limit },
+	])
 		.then((weather) => {
 			res.status(200).json({ weather: weather })
 		})
@@ -175,6 +186,7 @@ router.get("/weather/summary", (req, res, next) => {
 	const { from, to, match } = getHistoryOptions(req.query)
 
 	Weather.aggregate([
+		addReadingAtStage,
 		{ $match: match },
 		{
 			$group: {
@@ -236,13 +248,14 @@ router.get("/weather/timeseries", (req, res, next) => {
 	}
 
 	Weather.aggregate([
+		addReadingAtStage,
 		{ $match: match },
 		{
 			$group: {
 				_id: {
 					$dateToString: {
 						format,
-						date: "$measuredAt",
+						date: "$readingAt",
 						timezone: "UTC",
 					},
 				},
@@ -321,10 +334,15 @@ router.get("/history/24h", (req, res, next) => {
 	const now = new Date()
 	const cutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000)
 
-	Weather.find({
-		measuredAt: { $gte: cutoff },
-	})
-		.sort({ measuredAt: 1 }) // chronological order
+	Weather.aggregate([
+		addReadingAtStage,
+		{
+			$match: {
+				readingAt: { $gte: cutoff },
+			},
+		},
+		{ $sort: { readingAt: 1 } }, // chronological order
+	])
 		.then((weather) => {
 			res.status(200).json({ weather })
 		})
