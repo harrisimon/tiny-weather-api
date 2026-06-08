@@ -1,6 +1,38 @@
 # Tiny Weather API
 This is a Node-Express API for having a RasperryPi post weather readings. Every reading can have a user post an associated review.
 
+## Configuration
+
+Copy `.env.example` to `.env` for local development and set real values:
+
+```sh
+cp .env.example .env
+```
+
+Required production secrets:
+
+```sh
+fly secrets set MONGODB_URI="mongodb+srv://..."
+fly secrets set WEATHER_WRITE_TOKEN="a-long-random-secret"
+```
+
+Do not commit database credentials or the weather write token. If a MongoDB URI
+was previously committed, rotate the Atlas database user's password.
+
+## Raspberry Pi cron poster
+
+Use `raspberry-pi/weather_node.js` on the Pi. Configure the cron environment with
+the same `WEATHER_WRITE_TOKEN` used by the API:
+
+```sh
+WEATHER_API_URL=https://tinyweather.fly.dev/weather
+WEATHER_WRITE_TOKEN=a-long-random-secret
+WEATHER_DEVICE_ID=porch-pi
+```
+
+The API only accepts weather writes when the request includes the
+`X-Weather-Token` header.
+
 ## API
 
 Use this as the basis for your own API documentation. Add a new third-level

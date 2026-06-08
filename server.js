@@ -1,4 +1,6 @@
 // require necessary NPM packages
+require('dotenv').config()
+
 const express = require('express')
 const mongoose = require('mongoose')
 const cors = require('cors')
@@ -65,6 +67,10 @@ app.use(express.urlencoded({ extended: true }))
 
 // log each request as it comes in for debugging
 app.use(requestLogger)
+
+app.get('/health', (req, res) => {
+	res.status(200).json({ ok: true })
+})
 
 // register route files
 app.use(exampleRoutes)
