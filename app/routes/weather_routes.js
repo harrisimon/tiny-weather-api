@@ -2,6 +2,7 @@ const express = require("express")
 const passport = require("passport")
 
 const Weather = require("../models/weather")
+const weatherCache = require("../../lib/weather_cache")
 
 const customErrors = require("../../lib/custom_errors")
 const handle404 = customErrors.handle404
@@ -101,15 +102,36 @@ const emptySummary = (from, to) => ({
 	},
 })
 
-router.post("/weather", requireWeatherToken, (req, res, next) => {
-	Weather.create(req.body.weather)
-		.then(handle404)
-		.then((weather) => {
-			res.status(201).json({
-				weather: weather.toObject(),
-			})
-		})
-		.catch(next)
+router.post("/weather", requireWeatherToken, async (req, res, next) => {
+	try {
+		if (!req.body.weather) {
+			throw new BadParamsError()
+		}
+
+		// Validate using Mongoose schema rules without writing to DB
+		const weatherDoc = new Weather(req.body.weather)
+		await weatherDoc.validate()
+
+		// Instantly update the cache
+		weatherCache.setLatest(weatherDoc)
+
+		// Check if the 30-minute interval has passed
+		const THIRTY_MINUTES_MS = 30 * 60 * 1000
+		const lastWrite = await weatherCache.getLastWriteTime()
+		const now = Date.now()
+
+		if (now - lastWrite >= THIRTY_MINUTES_MS) {
+			const savedDoc = await weatherDoc.save()
+			weatherCache.setLatest(savedDoc)
+			weatherCache.setLastWriteTime(now)
+			console.log("💾 30-minute mark reached. Snapshot saved to MongoDB.")
+			return res.status(201).json({ weather: savedDoc.toObject() })
+		}
+
+		return res.status(200).json({ weather: weatherDoc.toObject() })
+	} catch (err) {
+		next(err)
+	}
 })
 
 router.get("/weather", (req, res, next) => {
@@ -128,25 +150,17 @@ router.get("/weather", (req, res, next) => {
 		.catch(next)
 })
 
-router.get("/latest", (req, res, next) => {
-	Weather.find({})
-
-		.sort({ createdAt: -1 })
-		.limit(1)
-		.populate({
-			path: "reviews",
-			populate: {
-				path: "author",
-				model: "User",
-				populate: {
-					path: "email",
-				},
-			},
-		})
-		.then((weather) => {
-			res.status(200).json({ weather: weather })
-		})
-		.catch(next)
+router.get("/latest", async (req, res, next) => {
+	try {
+		const latest = await weatherCache.getLatest()
+		if (latest) {
+			return res.status(200).json({ weather: [latest.toObject ? latest.toObject() : latest] })
+		} else {
+			return res.status(200).json({ weather: [] })
+		}
+	} catch (err) {
+		next(err)
+	}
 })
 
 router.get("/today", (req, res, next) => {

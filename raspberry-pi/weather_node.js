@@ -42,30 +42,39 @@ const postWithRetry = async (payload, attempts = 3) => {
 	throw lastError
 }
 
-bme280.init()
-	.then(() => bme280.readSensorData())
-	.then((data) => {
-		const payload = {
-			weather: {
-				temperature: data.temperature_C,
-				pressure: data.pressure_hPa,
-				humidity: data.humidity,
-				measuredAt: new Date().toISOString(),
-				deviceId,
-			},
+const runLoop = async () => {
+	await bme280.init()
+	console.log('📶 BME280 sensor initialized successfully. Starting telemetry loop...')
+
+	while (true) {
+		try {
+			const data = await bme280.readSensorData()
+			const payload = {
+				weather: {
+					temperature: data.temperature_C,
+					pressure: data.pressure_hPa,
+					humidity: data.humidity,
+					measuredAt: new Date().toISOString(),
+					deviceId,
+				},
+			}
+
+			console.log(`Sensor reading: ${JSON.stringify(payload.weather, null, 2)}`)
+
+			const response = await postWithRetry(payload)
+			console.log(`Data sent successfully: ${response.status}`)
+		} catch (err) {
+			const status = err.response && err.response.status
+			const body = err.response && err.response.data
+			console.error('Loop Error:', status || err.message, body || '')
 		}
 
-		console.log(`Sensor data: ${JSON.stringify(payload.weather, null, 2)}`)
+		console.log('Sleeping for 30 seconds...')
+		await sleep(30000)
+	}
+}
 
-		return postWithRetry(payload)
-	})
-	.then((response) => {
-		console.log(`Data sent successfully: ${response.status}`)
-		process.exit(0)
-	})
-	.catch((err) => {
-		const status = err.response && err.response.status
-		const body = err.response && err.response.data
-		console.error('Error:', status || err.message, body || '')
-		process.exit(1)
-	})
+runLoop().catch((err) => {
+	console.error('Fatal initialization error:', err)
+	process.exit(1)
+})
